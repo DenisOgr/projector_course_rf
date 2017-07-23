@@ -28,8 +28,11 @@ def get_ships_coords(observation):
         observation_2d_non_zero = np.append(observation_2d_non_zero, row, axis=0)
 
     if observation_2d_non_zero.size == 0:
-        return observation_2d_non_zero
+        return np.empty((0, 2), int)
     bandwidth = estimate_bandwidth(observation_2d_non_zero, quantile=0.3)
+    if bandwidth == 0:
+        return np.empty((0, 2), int)
+
     ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
     ms.fit(observation_2d_non_zero)
 
@@ -38,6 +41,10 @@ def get_ships_coords(observation):
 def get_centre_of_ships(ships_coord):
     result = np.mean(ships_coord, axis=0).astype(int)
     return result[0], result[1]
+
+def get_std_of_ships(ships_coord):
+    result = np.std(ships_coord)
+    return result
 
 def print_debbug_with_image(observation, player_coords, ships_coord, centr_of_ships):
     print('Player centre color: RED(255, 0,0)')
@@ -50,13 +57,14 @@ def print_debbug_with_image(observation, player_coords, ships_coord, centr_of_sh
     img = smp.toimage(observation)
     img.show()
 
-def print_debbug(player_coords, ships_coord, centre_of_ships):
+def print_debbug(player_coords, ships_coord, centre_of_ships, std_of_ships):
     print('Player coords: ' , player_coords)
     print('Ships coords: ' , ships_coord)
     print('Centre of all ships coords: ' , centre_of_ships)
+    print('Std of all ships: ' , std_of_ships)
 
 
-number_tic_for_test = 25
+number_tic_for_test = 46
 for i_episode in range(20):
     print("Episode#", i_episode)
     observation = env.reset()
@@ -66,10 +74,13 @@ for i_episode in range(20):
         ships_coord = get_ships_coords(observation)
         if ships_coord.size != 0:
             centr_of_ships_y, centr_of_ships_x = get_centre_of_ships(ships_coord)
+            std_of_ships = get_std_of_ships(ships_coord)
+
+            print_debbug((player_y, player_x), ships_coord, (centr_of_ships_y, centr_of_ships_x), std_of_ships)
+
             if number_tic_for_test == t:
                 print_debbug_with_image(observation, (player_y, player_x), ships_coord, (centr_of_ships_y, centr_of_ships_x))
 
-            print_debbug((player_y, player_x), ships_coord, (centr_of_ships_y, centr_of_ships_x))
         action = env.action_space.sample()
         observation, reward, done, info = env.step(action)
         if done:
